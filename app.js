@@ -8,9 +8,10 @@ function halt(){active=false;clearTimeout(timer);timer=null;el('start').disabled
 async function refresh(){
 if(!user)return;
 const rows=unwrap(await db.from('acb_sessions').select('id,clicks,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(500));
-const world=unwrap(await db.rpc('acb_global'));
-el('mine').textContent=format(rows.reduce((sum,r)=>sum+Number(r.clicks),0));
-el('world').textContent=format(world);el('total').textContent=format(rows.length);
+const worldRow=unwrap(await db.from('button_world').select('total').eq('id',1).single());
+const ownRow=unwrap(await db.from('button_players').select('total').eq('user_id',user.id).maybeSingle());
+el('mine').textContent=format(ownRow?.total||0);
+el('world').textContent=format(worldRow.total);el('total').textContent=format(rows.length);
 const list=el('sessions');list.replaceChildren();
 if(!rows.length)list.textContent='Aucune session de test.';
 for(const r of rows){
@@ -18,7 +19,7 @@ const line=document.createElement('div'),details=document.createElement('div'),b
 details.textContent=format(r.clicks)+' clics';const date=document.createElement('small');
 date.textContent=new Date(r.created_at).toLocaleString('fr-FR');details.append(date);
 button.textContent='Annuler';button.className='danger';button.disabled=active;
-button.onclick=async()=>{if(!confirm('Supprimer cette session de test ?'))return;try{unwrap(await db.from('acb_sessions').delete().eq('id',r.id).eq('user_id',user.id));await refresh();note('Session annulée.')}catch(e){note(e.message,true)}};
+button.onclick=async()=>{if(!confirm('Supprimer cette session de test ?'))return;try{unwrap(await db.rpc('acb_remove',{p_id:r.id}));await refresh();note('Session annulée.')}catch(e){note(e.message,true)}};
 line.append(details,button);list.append(line);
 }}
 async function auth(){
@@ -56,7 +57,7 @@ note('Test démarré.');await refresh();timer=setTimeout(sendBatch,1000);
 el('stop').onclick=async()=>{halt();await refresh().catch(()=>{});note('Test arrêté.')};
 el('clear').onclick=async()=>{if(active){note('Arrête d’abord le test.',true);return}
 if(!confirm('Supprimer toutes tes sessions de test ?'))return;
-try{unwrap(await db.from('acb_sessions').delete().eq('user_id',user.id));await refresh();note('Tests supprimés.')}catch(e){note(e.message,true)}};
+try{unwrap(await db.rpc('acb_remove',{p_id:null}));await refresh();note('Tests supprimés.')}catch(e){note(e.message,true)}};
 db.auth.onAuthStateChange(()=>setTimeout(()=>auth().catch(e=>note(e.message,true)),0));
 auth().catch(e=>note(e.message,true));
 })();
