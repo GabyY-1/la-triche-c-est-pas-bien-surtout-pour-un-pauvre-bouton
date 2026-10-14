@@ -11,13 +11,13 @@ Application web privée de test des compteurs, conçue pour un Chromebook.
 ## Fonctions
 - Authentification Supabase par e-mail et mot de passe.
 - Débit configurable de 1 à 100 clics/s, avec un lot toutes les secondes.
-- Compteurs de test personnel et mondial, et historique des sessions.
-- Suppression des sessions personnelles pour annuler leur contribution.
+- Compteurs **réels** personnel et mondial, et historique des sessions.
+- Suppression des sessions personnelles via la fonction RPC `acb_remove`, qui annule leur contribution dans les vrais compteurs.
 - Contrôles serveur : connexion obligatoire, 100 clics max par lot, 750 ms entre deux lots et 1 million par session.
 - Design responsive, compatible navigateur Chromebook.
 
 ## Limite connue
-Les tables réelles du Bouton Mondial n'étaient pas accessibles via la connexion Supabase lors de la création. Les clics sont donc **isolés dans acb_sessions** et ne modifient **pas** les vrais compteurs du site. Pour intégrer les vraies tables, il faudra vérifier leur structure et ajouter une opération atomique et réversible.
+**Mise à jour :** la liaison est installée sur Supabase. `acb_add` ajoute les clics aux tables réelles `button_players` et `button_world` dans une transaction. `acb_contributions` conserve les périodes quotidiennes/hebdomadaires des clics de test pour que `acb_remove` les annule proprement. Les sessions existantes sont gérées séparément. **La migration additionnelle a été déployée sur le projet Supabase connecté**, et n'est pas incluse dans `setup.sql` (qui contient le schéma initial seulement).
 
 ## Sécurité
 La clé Supabase fournie est **publishable** (publique). Ne jamais ajouter de clé `service_role` au JavaScript. Les fonctions SQL ont des contrôles d'authentification. Il faut réserver l'accès aux utilisateurs autorisés si cet outil doit rester strictement privé.
