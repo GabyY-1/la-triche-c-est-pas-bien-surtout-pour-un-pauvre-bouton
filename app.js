@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const db=window.supabase.createClient('https://rtxtwbizfbsjhvttyatn.supabase.co','sb_publishable_sVjVP83s_N1i4WvMt1If5g_ZfuP1v1c');
 const el=id=>document.getElementById(id),format=x=>Number(x||0).toLocaleString('fr-FR');
-let user=null,active=false,current=null,clicks=0,remaining=0,timer=null,refreshing=false,starting=false,authBusy=false;
+let user=null,active=false,current=null,clicks=0,remaining=0,timer=null,refreshing=false,starting=false,authBusy=false,rate=10;
 const note=(msg,error=false)=>{el('notice').textContent=msg;el('notice').style.color=error?'#ffadb7':'#a3e4bb'};
 const unwrap=r=>{if(r.error)throw r.error;return r.data};
 function halt(){active=false;clearTimeout(timer);timer=null;el('start').disabled=false;el('stop').disabled=true;el('rate').disabled=false;el('limit').disabled=false;el('status').textContent='Arrêté'}
@@ -46,12 +46,12 @@ await auth();note(signup?'Compte créé. Une validation e-mail peut être néces
 }catch(e){note(e.message,true)}}
 el('login').onclick=()=>login(false);el('register').onclick=()=>login(true);
 el('logout').onclick=async()=>{halt();await db.auth.signOut();await auth();note('Déconnecté.')};
-el('rate').oninput=()=>{el('rateValue').textContent=el('rate').value};
+el('rate').oninput=()=>{};
 async function sendBatch(){
 if(!active)return;
-const amount=remaining>0?Math.min(Number(el('rate').value),remaining):Number(el('rate').value);
+const amount=remaining>0?Math.min(rate,remaining):rate;
 try{
-const total=unwrap(await db.rpc('acb_add',{p_id:current,p_clicks:amount}));
+const total=unwrap(await db.rpc('acb_add_v2',{p_id:current,p_clicks:amount}));
 clicks=Number(total);el('clicks').textContent=format(clicks);
 if(remaining>0){remaining-=amount;if(remaining<=0){halt();note('Limite atteinte.');await refresh();return}}
 if(clicks%500<amount)refresh().catch(e=>note(e.message,true));
@@ -60,6 +60,8 @@ timer=setTimeout(sendBatch,1000);
 el('start').onclick=async()=>{
 if(active||starting||!user)return;
 starting=true;el('start').disabled=true;
+rate=Number(el('rate').value);
+if(!Number.isSafeInteger(rate)||rate<1||rate>1000000){starting=false;el('start').disabled=false;note('La vitesse doit être entre 1 et 1 000 000 CPS.',true);return}
 const limit=Number(el('limit').value);
 if(!Number.isSafeInteger(limit)||limit<0||limit>1000000){starting=false;el('start').disabled=false;note('Limite entre 0 et 1 000 000.',true);return}
 try{
